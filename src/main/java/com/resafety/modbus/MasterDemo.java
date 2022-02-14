@@ -23,10 +23,15 @@ public class MasterDemo {
 
     /*
      * TODO 记录
-     * TODO 900个点  4线程 每个Runnable查询一个 14426ms
-     * TODO 900个点  8线程 每个Runnable查询一个 14402ms
-     * TODO 1800个点 4线程 每个Runnable查询一个 28489ms
-     * TODO 1800个点 8线程 每个Runnable查询一个 28489ms
+     * TODO 1800个点 4线程  每个Runnable查询1个  28489ms
+     * TODO 1800个点 8线程  每个Runnable查询1个  28489ms
+     * TODO 1800个点 4线程  每个Runnable查询10个 15220ms
+     * TODO 1800个点 8线程  每个Runnable查询10个 7925ms
+     * TODO 1800个点 8线程  每个Runnable查询20个 8148ms
+     * TODO 1800个点 8线程  每个Runnable查询30个 7946ms
+     * TODO 1800个点 16线程 每个Runnable查询10个 4290ms
+     * TODO 1800个点 16线程 每个Runnable查询20个 4264ms
+     * TODO 1800个点 16线程 每个Runnable查询30个 4274ms
      */
 
     private static final Logger logger = LoggerFactory.getLogger(MasterDemo.class);
@@ -62,19 +67,24 @@ public class MasterDemo {
         long timer = System.currentTimeMillis();
 
         // 每个线程查询10个
-        int slice = 10;
+        int slice = 30;
 
-        for (Integer address : addressList) {
+        for (int i = 0; i < addressList.size(); i++) {
+            int index = i;
             THREAD_POOL.execute(() -> {
                 try {
                     ModbusTcpMaster master = new ModbusTcpMaster(config);
                     master.connect();
-                    readHoldingRegisters(master, address, 1, 1);
+                    for (int j = 0; j < slice; j++) {
+                        readHoldingRegisters(master, addressList.get(index + j), 1, 1);
+                    }
                     master.disconnect();
                 } catch (InterruptedException | ExecutionException e) {
                     logger.error("exception {}", e.getMessage());
                 }
             });
+            i += slice - 1;
+            logger.info("begin {} ~ {}", index, i + 1);
         }
 
         THREAD_POOL.shutdown();
@@ -98,7 +108,7 @@ public class MasterDemo {
             StringBuilder result = new StringBuilder();
             result.append(decimalToBinary(bytes[0], 8));
             result.append(decimalToBinary(bytes[1], 8));
-            logger.info(address + "->{}", result);
+            logger.info(address + " ->{} ", result);
             ReferenceCountUtil.release(readHoldingRegistersResponse);
         }
     }
